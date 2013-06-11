@@ -1,0 +1,307 @@
+#some tools for helping with quantum espresso
+
+import numpy as np
+import matplotlib.pyplot as plt
+from pylab import cm
+import re
+import mytools
+import solidstate
+
+class scfdata:
+  """information for scf calclations.
+  WARNING: There may be round-off errors because this info is 
+  read from scf output file."""
+  def __init__(self,filename):
+    """init from scf output file"""
+    f = open(filename,"r")
+    fs = f.read()
+    f.close()
+    #crystal cell axes, units of alat
+    a = []
+    m = re.search(r"a\(1\)\s*=\s*\(([+\s\d.\-]+)\)",fs)
+    a1s = m.group(1).split()
+    a1 = [float(x) for x in a1s]
+    a.append(a1)
+    m = re.search(r"a\(2\)\s*=\s*\(([+\s\d.\-]+)\)",fs)
+    a2s = m.group(1).split()
+    a2 = [float(x) for x in a2s]
+    a.append(a2)
+    m = re.search(r"a\(3\)\s*=\s*\(([+\s\d.\-]+)\)",fs)
+    a3s = m.group(1).split()
+    a3 = [float(x) for x in a3s]
+    a.append(a3)
+    self.a = np.transpose(np.array(a))
+    #reciprocal axes, units of 2pi/alat
+    b = []
+    m = re.search(r"b\(1\)\s*=\s*\(([+\s\d.\-]+)\)",fs)
+    b1s = m.group(1).split()
+    b1 = [float(x) for x in b1s]
+    b.append(b1)
+    m = re.search(r"b\(2\)\s*=\s*\(([+\s\d.\-]+)\)",fs)
+    b2s = m.group(1).split()
+    b2 = [float(x) for x in b2s]
+    b.append(b2)
+    m = re.search(r"b\(3\)\s*=\s*\(([+\s\d.\-]+)\)",fs)
+    b3s = m.group(1).split()
+    b3 = [float(x) for x in b3s]
+    b.append(b3)
+    self.b = np.transpose(np.array(b))
+    #kpts, units of 2pi/alat
+    matches = re.findall(r"k\([\s\d]+\)\s*=\s*\(([+\s\d.\-]+)\),\s*wk\s*=",fs)
+    kcart = []
+    for m in matches:
+      ks = m.split()
+      k = [float(x) for x in ks]
+      kcart.append(k)
+    self.kcart = np.array(kcart)
+    #kpts, crystal coords
+    kcrys = []
+    ginv = np.linalg.inv(self.b)
+    for k in self.kcart:
+      kcrys.append(np.dot(ginv,k))
+    self.kcrys = np.array(kcrys)
+    #alat (bohr)
+    m = re.search(r"lattice parameter \(alat\)\s*=\s*([\d.]+)\s*a\.u\.",fs)
+    self.alat = float(m.group(1))
+    #atoms positions, alat
+    matches = re.findall(r"\s*\d+\s*(\w+)\s+tau\(\s*\d+\)\s*=\s*\(([\s\d.-]+)\)",fs)
+    atpos = []
+    for m in matches:
+      pstr = m[1].split()
+      p = [float(x) for x in pstr]
+      atpos.append([m[0],np.array(p)])
+    self.atpos = atpos
+  
+
+  def printwin(self,kpts):
+    """print wannier90 input file.
+    input: kpts = (n1,n2,n3) monkhorst-pack grid.
+    WARNING: There may be round-off errors because this info is 
+    read from scf output file."""
+    f = open("x.win","w")
+    f.write("begin unit_cell_cart\n")
+    f.write("Bohr\n")
+    aa = self.a * self.alat
+    for i in range(3):
+      f.write("%s %s %s\n" % (aa[0,i],aa[1,i],aa[2,i]))
+    f.write("end unit_cell_cart\n\n")
+    f.write("begin atoms_cart\n")
+    f.write("Bohr\n")
+    for ap in self.atpos:
+      p = ap[1] * self.alat
+      f.write("%s %s %s %s\n" % (ap[0],p[0],p[1],p[2]))
+    f.write("end atoms_cart\n\n")
+    f.write("mp_grid : %s %s %s\n\n" % kpts)
+    f.write("begin kpoints\n")
+    k1s = np.linspace(0.0,1.0,kpts[0],endpoint=False)
+    k2s = np.linspace(0.0,1.0,kpts[1],endpoint=False)
+    k3s = np.linspace(0.0,1.0,kpts[2],endpoint=False)
+    for k1 in k1s:
+      for k2 in k2s:
+        for k3 in k3s:
+          f.write("%s %s %s\n" % (k1,k2,k3))
+    f.write("end kpoints\n\n")
+
+
+
+def molspectra(filename,emin,emax):
+  """takes an scf output file and creates a plot of
+  the energy eigenstates. Gamma pt only. """
+ 
+  # get data
+  f = open(filename,"r")
+  m = re.search(r"k = .+bands \(ev\):([\s\d.\-]+)the Fermi energy is([\s\d.\-]+)ev",f.read())
+  f.close()
+  bands_str = m.group(1).split() 
+  ef_str = m.group(2).split() 
+  bands = [float(x) for x in bands_str]
+  ef = float(ef_str[0])
+
+  # make figure
+  plt.figure()
+  plt.subplot(1,1,1,aspect=2.0)
+  x = np.linspace(emin,emax,2,endpoint=True)
+  for b in bands:
+    y = np.linspace(b,b,2,endpoint=True)
+    plt.plot(x,y,color="blue",linestyle="-",linewidth=2.0)
+  y = np.linspace(ef,ef,2,endpoint=True)
+  plt.plot(x,y,color="black",linestyle="--")
+  plt.xlim(emin,emax)
+  plt.ylim(emin,emax)
+  plt.xticks([])
+  plt.ylabel("E (eV)",size="x-large")
+  ax = plt.gca()
+  for lab in ax.get_yticklabels():
+    lab.set_fontsize(18)
+  plt.savefig("molspectra.png")
+  plt.show()
+
+#def bandplot(filename,emin,emax):
+#  """takes scf file and makes a bandstructure plot"""
+
+class spaghetti:
+  """band structures"""
+  def __init__(self,filename):
+    """reads nscf file"""
+    f = open(filename,"r")
+    fstr= f.read()
+    matches = re.findall(r"k =([\s\d.\-]+)band energies \(ev\):([\s\d.\-]+)",fstr)
+    efmatch = re.search(r"the Fermi energy is([\s\d.\-]+)ev",fstr)
+    kpts = []
+    bands = []
+    for m in matches:
+      ks0 = m[0].strip()
+      ks1 = ks0.split()
+      kpts.append(map(float,ks1))
+      b0 = m[1].strip()
+      b1 = b0.split()
+      bands.append(map(float,b1))
+    self.kpts = np.array(kpts)
+    self.bands = np.transpose(np.array(bands))
+    self.ef = float(efmatch.group(1).strip())
+
+  def plot(self,emin,emax,sympts,symlabels):
+    """creates a plot of the bandstructure. 
+    sympts are the indices [n] of high-symmetry points,
+    symlabels are their ["labels"] ."""
+    plt.figure()
+    plt.subplot(1,1,1)
+    x = range(1,len(self.kpts)+1)
+    for b in self.bands:
+      plt.plot(x,b,color='blue',linestyle='-',linewidth=2.0)
+    y = np.linspace(self.ef,self.ef,len(self.kpts),endpoint=True)
+    plt.plot(x,y,color='black',linestyle='--')
+    plt.ylim(emin,emax)
+    plt.xticks([])
+    plt.ylabel("E (eV)",size="x-large")
+    for s in sympts:
+      plt.vlines(s,emin,emax,color='black')
+    ax = plt.gca()
+    ax.set_xticks(sympts)
+    ax.set_xticklabels(symlabels)
+    for lab in ax.get_yticklabels():
+      lab.set_fontsize(18)
+    for lab in ax.get_xticklabels():
+      lab.set_fontsize(18)
+    plt.gcf().subplots_adjust(left=0.2)
+    plt.savefig("bands.png")
+    plt.show()
+
+class spaghetti_scf:
+  """band structures"""
+  def __init__(self,filename):
+    """reads scf file"""
+    f = open(filename,"r")
+    fstr= f.read()
+    matches = re.findall(r"k =([\s\d.\-]+).*bands \(ev\):([\s\d.\-]+)",fstr)
+    efmatch = re.search(r"the Fermi energy is([\s\d.\-]+)ev",fstr)
+    kpts = []
+    bands = []
+    for m in matches:
+      #ks0 = m[0].strip()
+      #ks1 = ks0.split()
+      #kpts.append(map(float,ks1))
+      b0 = m[1].strip()
+      b1 = b0.split()
+      bands.append(map(float,b1))
+    #self.kpts = np.array(kpts)
+    self.bands = np.transpose(np.array(bands))
+    self.ef = float(efmatch.group(1).strip())
+
+  def plot(self,emin,emax,sympts,symlabels):
+    """creates a plot of the bandstructure. 
+    sympts are the indices [n] of high-symmetry points,
+    symlabels are their ["labels"] ."""
+    plt.figure()
+    plt.subplot(1,1,1)
+    x = range(1,len(self.kpts)+1)
+    for b in self.bands:
+      plt.plot(x,b,color='blue',linestyle='-',linewidth=2.0)
+    y = np.linspace(self.ef,self.ef,len(self.kpts),endpoint=True)
+    plt.plot(x,y,color='black',linestyle='--')
+    plt.ylim(emin,emax)
+    plt.xticks([])
+    plt.ylabel("E (eV)",size="x-large")
+    for s in sympts:
+      plt.vlines(s,emin,emax,color='black')
+    ax = plt.gca()
+    ax.set_xticks(sympts)
+    ax.set_xticklabels(symlabels)
+    for lab in ax.get_yticklabels():
+      lab.set_fontsize(18)
+    for lab in ax.get_xticklabels():
+      lab.set_fontsize(18)
+    plt.gcf().subplots_adjust(left=0.2)
+    plt.savefig("bands.png")
+    plt.show()
+
+
+
+
+class XSF:
+  """xcrysden data files"""
+  atoms = []
+
+  def __init__(self,fname):
+    """reads xcrysden xsf file for a 2d datagrid
+    dimensions stored in n1,n2; 
+    extent stored in vectors a1,a2, data stored in data.
+    format is data[y_index,x_index]"""
+    f = open(fname,"r")
+    m = re.search(r"DATAGRID_2D_UNKNOWN\n\s+(\d+)\s+(\d+)\n(.+\n)(.+\n)(.+\n)([E\s\d.\-\+]+)END_DATAGRID_2D",f.read())
+    f.close()
+    self.n1 = int(m.group(1))
+    self.n2 = int(m.group(2))
+    self.a1 = np.array([float(d) for d in m.group(4).split()])
+    self.a2 = np.array([float(d) for d in m.group(5).split()])
+    dataflat = [float(d) for d in m.group(6).split()]
+    self.data = np.array(mytools.partn(dataflat,self.n1))
+
+  def makeimage(self):
+    plt.figure()
+    plt.subplot(1,1,1)
+    plt.imshow(self.data,cmap=cm.gray)
+    plt.xticks([])
+    plt.yticks([])
+    plt.savefig("xsfdata.png")
+    plt.show()
+
+class matdyn:
+  """dynamical matrix files produced by ph.x"""
+  def __init__(self,filename):
+    f = open(filename,"r")
+    fstr = f.read()
+    #this gets the eigen vectors
+    matches = re.findall(r"omega.*\s+((?:\([\s\.\d\-]+\)\s+)+)",fstr)
+    #print len(matches)
+    evecs = []
+    for m0 in matches:
+      m0s = m0.strip().split('\n')
+      m0sl = [x.strip('() \n') for x in m0s]
+      temp = []
+      for m in m0sl:
+        m1 = [float(x) for x in m.split()]
+        temp.append(m1[0])
+        temp.append(m1[2])
+        temp.append(m1[4])
+      evecs.append(temp)
+    self.evecs = np.array(evecs)
+      
+    #this gets the phonon frequencies, convert to eV
+    matches = re.findall(r"omega.*THz\D*([\d.]+)\s+\[cm-1\]",fstr)
+    #matches = re.findall(r"omega.*THz\D*([\d.]+)",fstr)
+    self.freqs = np.array([float(m)*0.1241/1000 for m in matches])
+    
+    f.close()
+
+
+def relaxed(filename):
+  """takes a relax outputfile and returns the final structure
+  as a list of Atom objects"""
+  f = open(filename,"r")
+  m = re.search(r"Begin final coordinates\s+ATOMIC_POSITIONS[^\n]*\n(.*)End final coordinates",f.read(),re.DOTALL)
+  f.close()
+  ss = m.group(1).strip().split('\n')
+  sss = [s.split() for s in ss]
+  ans = [solidstate.Atom(x[0],np.array([float(x[1]),float(x[2]),float(x[3])])) for x in sss]
+  return ans
