@@ -1,4 +1,4 @@
-
+import numpy as np
 
 #partition a list into sublists of len n
 def partn(l,n):
@@ -9,6 +9,9 @@ def partn(l,n):
     nparts = nl/n + 1
   return [l[i*n:(i+1)*n] for i in range(nparts)]
 
+#flatten a list of lists
+def myflatten(l):
+  return [x for xs in l for x in xs]
 
 #round-up division of integers
 def mydiv(n,p):
@@ -16,6 +19,18 @@ def mydiv(n,p):
     return n/p
   else:
     return n/p+1
+
+#mod for reals
+#assumes ub>lb
+def modrange(lb,ub,x):
+  if(x-lb >0):
+    denom = ub-lb
+    numer = x-lb
+    return lb + np.remainder(numer,denom);
+  else:
+    denom = ub-lb
+    numer = ub - x
+    return ub - np.remainder(numer,denom);
 
 #linked list
 class linked_node:

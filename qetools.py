@@ -154,8 +154,9 @@ class spaghetti:
       ks1 = ks0.split()
       kpts.append(map(float,ks1))
       b0 = m[1].strip()
-      b1 = b0.split()
-      bands.append(map(float,b1))
+      b1 = b0.replace("-"," -")
+      b2 = b1.split()
+      bands.append(map(float,b2))
     self.kpts = np.array(kpts)
     self.bands = np.transpose(np.array(bands))
     self.ef = float(efmatch.group(1).strip())
@@ -266,6 +267,31 @@ class XSF:
     plt.savefig("xsfdata.png")
     plt.show()
 
+class XSF_3D:
+  """xcrysden data files"""
+  atoms = []
+
+  def __init__(self,fname):
+    """reads xcrysden xsf file for a 3d datagrid
+    dimensions stored in n1,n2,n3; 
+    extent stored in vectors a1,a2,a3, data stored in data.
+    format is data[z_index,y_index,x_index]"""
+    f = open(fname,"r")
+    m = re.search(r"DATAGRID_3D_UNKNOWN\n\s+(\d+)\s+(\d+)\s+(\d+)\n(.+\n)(.+\n)(.+\n)(.+\n)([E\s\d.\-\+]+)END_DATAGRID_3D",f.read())
+    f.close()
+    self.n1 = int(m.group(1))
+    self.n2 = int(m.group(2))
+    self.n3 = int(m.group(3))
+    self.a1 = np.array([float(d) for d in m.group(5).split()])
+    self.a2 = np.array([float(d) for d in m.group(6).split()])
+    self.a3 = np.array([float(d) for d in m.group(7).split()])
+    dataflat = [float(d) for d in m.group(8).split()]
+    temp = mytools.partn(dataflat,self.n1)
+    self.data = np.array(mytools.partn(temp,self.n2))
+
+
+
+
 class matdyn:
   """dynamical matrix files produced by ph.x"""
   def __init__(self,filename):
@@ -305,3 +331,55 @@ def relaxed(filename):
   sss = [s.split() for s in ss]
   ans = [solidstate.Atom(x[0],np.array([float(x[1]),float(x[2]),float(x[3])])) for x in sss]
   return ans
+
+
+class mmn:
+  """reads .mmn file which is output from wannier90.
+  These are the overlap matrices.
+  overlaps: matrices, dict. indexed by (i,j);
+  where i, j are the indices of the kpoints.
+  i,j indexed from 1.
+  celldiffs: cell differences between i, j
+  nkpts: # of kpoints
+  nbnds: # of bands
+  nnei : # of neighbors each kpoint has
+  """
+
+  def __init__(self,filename):
+
+    f = open(filename,"r")
+    f.readline()
+    info = f.readline()
+    infos = [int(x) for x in info.split()]
+    self.nbnds = infos[0]
+    self.nkpts = infos[1]
+    self.nnei = infos[2]
+    self.celldiffs = dict([])
+    self.overlaps = dict([])
+
+    for kidx in range(self.nkpts):
+      for nidx in range(self.nnei):
+        head = f.readline()
+        heads = [int(x) for x in head.split()]
+        cd = np.array(heads[2:])
+        accu = []
+        for uidx in range(self.nbnds * self.nbnds):
+          us = [float(x) for x in f.readline().split()]
+          u = complex(*us)
+          accu.append(u)
+        
+        if(len(heads)>0):
+          self.overlaps[(heads[0],heads[1])] = np.reshape(np.array(accu), (self.nbnds,self.nbnds))
+          self.celldiffs[(heads[0],heads[1])] = cd
+        else:
+          break
+
+    f.close()
+
+
+  
+
+
+
+
+

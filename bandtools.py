@@ -42,6 +42,17 @@ def readbands(filename):
 def lor(x,c,b):
   return (1.0/np.pi)*b/((x-c)*(x-c)+b*b)
 
+#imag to real Kramers kronig transform
+# wps should be shifted relative to ws
+# in order to avoid divergence
+def kkim2re(ima,wps,ws):
+  ima1 = np.array(ima)
+  wps1 = np.array(wps)
+  ans = []
+  for w in ws:
+    f = ima1/(w-wps1)
+    ans.append(np.trapz(f,x=wps))
+  return np.array(ans)/np.pi
 
 #calculate density of states from bandstructure
 # the input is the output of readbands
