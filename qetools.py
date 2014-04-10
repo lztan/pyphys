@@ -7,6 +7,85 @@ import re
 import mytools
 import solidstate
 
+class scfindata:
+  """information for scf calclations. 
+  from scf input file"""
+  def __init__(self,filename):
+    """init from scf input file"""
+    f = open(filename,"r")
+    fs = f.read()
+    f.close()
+    #crystal cell axes, units of bohr
+    a = []
+    ibrav_s = re.search(r"ibrav\s*=\s*(\d)",fs)
+    ibrav = int(ibrav_s.group(1))
+    celldm1_s = re.search(r"celldm\(\s*1\s*\)\s*=\s*([\d.]+)",fs)
+    celldm2_s = re.search(r"celldm\(\s*2\s*\)\s*=\s*([\d.]+)",fs)
+    celldm3_s = re.search(r"celldm\(\s*3\s*\)\s*=\s*([\d.]+)",fs)
+    if ibrav==4:
+      celldm1 = float(celldm1_s.group(1))
+      alat = celldm1
+      celldm3 = float(celldm3_s.group(1))
+      a.append([celldm1,0.0,0.0])
+      a.append([-1.0*celldm1*0.5,np.sqrt(3.0)*0.5*celldm1,0.0])
+      a.append([0.0,0.0,alat*celldm3])
+    if ibrav==2:
+      celldm1 = float(celldm1_s.group(1))
+      alat = celldm1
+      a.append([-1.0*alat*0.5,0.0,alat*0.5])
+      a.append([0.0,alat*0.5,alat*0.5])
+      a.append([-1.0*alat*0.5,alat*0.5,0.0])
+    self.a = np.array(a)
+    self.alat= alat
+    #atoms positions, in atomunits
+    #if specified in crystal coords, switch to angstrom
+    atomcard = re.search(r"ATOMIC_POSITIONS.*K_POINTS",fs,re.DOTALL)
+    atomunits_s = re.search(r"ATOMIC_POSITIONS\s+(\w+)",atomcard.group(0))
+    atomunits = atomunits_s.group(1)
+    atoms = re.findall(r"^\s*(\w+)\s+([\d.\-]+)\s+([\d.\-]+)\s+([\d.\-]+)",atomcard.group(0),re.MULTILINE)
+    atpos = []
+    for m in atoms:
+      p = [float(x) for x in m[1:]]
+      if atomunits=="crystal":
+        atpos.append([m[0],np.dot(np.array(p),self.a)/0.52917721092])
+      else:
+        atpos.append([m[0],np.array(p)])
+    self.atpos = atpos
+  
+
+  def printwin(self,kpts):
+    """print wannier90 input file.
+    input: kpts = (n1,n2,n3) monkhorst-pack grid.
+    WARNING: There may be round-off errors because this info is 
+    read from scf output file."""
+    f = open("x.win","w")
+    f.write("begin unit_cell_cart\n")
+    f.write("Bohr\n")
+    aa = self.a 
+    for i in range(3):
+      f.write("%19.27g %19.27g %19.27g\n" % (aa[i,0],aa[i,1],aa[i,2]))
+    f.write("end unit_cell_cart\n\n")
+    f.write("begin atoms_cart\n")
+    f.write("Ang\n")
+    for ap in self.atpos:
+      p = ap[1] * self.alat
+      f.write("%s %19.27g %19.27g %19.27g\n" % (ap[0],p[0],p[1],p[2]))
+    f.write("end atoms_cart\n\n")
+    f.write("mp_grid : %s %s %s\n\n" % kpts)
+    f.write("begin kpoints\n")
+    k1s = np.linspace(0.0,1.0,kpts[0],endpoint=False)
+    k2s = np.linspace(0.0,1.0,kpts[1],endpoint=False)
+    k3s = np.linspace(0.0,1.0,kpts[2],endpoint=False)
+    for k1 in k1s:
+      for k2 in k2s:
+        for k3 in k3s:
+          f.write("%s %s %s\n" % (k1,k2,k3))
+    f.write("end kpoints\n\n")
+
+
+
+
+
 class scfdata:
   """information for scf calclations.
   WARNING: There may be round-off errors because this info is 
@@ -147,19 +226,24 @@ class spaghetti:
     fstr= f.read()
     matches = re.findall(r"k =([\s\d.\-]+)band energies \(ev\):([\s\d.\-]+)",fstr)
     efmatch = re.search(r"the Fermi energy is([\s\d.\-]+)ev",fstr)
+    ef1match = re.search(r"highest occupied, lowest unoccupied level \(ev\):\s+([\d.\-]+)\s+([\d.\-]+)",fstr)
     kpts = []
     bands = []
     for m in matches:
       ks0 = m[0].strip()
-      ks1 = ks0.split()
-      kpts.append(map(float,ks1))
+      ks1 = ks0.replace("-"," -")
+      ks2 = ks1.split()
+      kpts.append(map(float,ks2))
       b0 = m[1].strip()
       b1 = b0.replace("-"," -")
       b2 = b1.split()
       bands.append(map(float,b2))
     self.kpts = np.array(kpts)
     self.bands = np.transpose(np.array(bands))
-    self.ef = float(efmatch.group(1).strip())
+    if efmatch:
+      self.ef = float(efmatch.group(1).strip())
+    elif ef1match:
+      self.ef = (float(ef1match.group(1)) + float(ef1match.group(2)) )/2.0
 
   def plot(self,emin,emax,sympts,symlabels):
     """creates a plot of the bandstructure. 

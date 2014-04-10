@@ -42,6 +42,22 @@ def readbands(filename):
 def lor(x,c,b):
   return (1.0/np.pi)*b/((x-c)*(x-c)+b*b)
 
+#theta function
+def thetafn(x):
+  if x>0:
+    return 1.0
+  elif x<0:
+    return 0.0
+  else:
+    return 0.5
+
+#fermi dirac function
+def fermidirac(x):
+  return 1.0/(1.0+np.exp(x))
+
+def boseeinstein(x):
+  return 1.0/(np.exp(x)-1)
+
 #imag to real Kramers kronig transform
 # wps should be shifted relative to ws
 # in order to avoid divergence
@@ -122,3 +138,71 @@ def printvec(filename,v):
   for x in v:
     fout.write("%s\n" % x)
   fout.close()
+
+#print a tensor of arbitary rank to file
+def printtens_h(fileh,tens):
+  rank = len(tens.shape)
+  if rank==2:
+    for r in tens:
+      for x in r:
+        fileh.write("%s " % x)
+      fileh.write("\n")
+  else:
+    for r in tens:
+      printtens_h(fileh,r)
+      fileh.write("\n")
+
+def printtens(filename,tens):
+  fout = open(filename,"w")
+  printtens_h(fout,tens)
+  fout.close()
+
+#read a tensor of arbitrary rank to file
+def readtens(filename):
+  rank = 1 #current rank of ans
+  fin = open(filename,"r")
+  ans = []
+  ans2 = [] #this is a matrix
+  c = 0 # counts number of consec blank lines
+  for l in fin:
+    if len(l.strip())>0:
+      xs = [float(x) for x in l.split()]
+      ans2.append(xs)
+      if c>1:
+        empt = []
+        for i in range(c-2):
+          empt = [empt]
+        currans = ans
+        for i in range(rank-c):
+          currans = currans[-1]
+        currans.append(empt)
+        #print "checkpt 1"
+        #print ans
+      c=0
+    else:
+      c+=1
+      if c==1:
+        currans = ans
+        for i in range(rank-1):
+          currans = currans[-1]
+        currans.append(ans2)
+        ans2 = []
+        #print "checkpt 2"
+        #print ans
+      else:
+        if c>rank:
+          rank += 1
+          empt = []
+          for i in range(rank-2):
+            empt = [empt]
+          ans = [ans,empt]
+          c=0
+          #print "checkpt 3"
+          #print ans
+
+  fin.close()
+  return np.array(ans)
+  #return ans
+    
+
+    
