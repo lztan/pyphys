@@ -32,6 +32,13 @@ def modrange(lb,ub,x):
     numer = ub - x
     return ub - np.remainder(numer,denom);
 
+#numeric boolean. true=1, false=0
+def numbool(x):
+  if x:
+    return 1
+  else:
+    return 0
+
 #linked list
 class linked_node:
   def __init__(self,data):

@@ -35,9 +35,20 @@ class scfindata:
       a.append([-1.0*alat*0.5,0.0,alat*0.5])
       a.append([0.0,alat*0.5,alat*0.5])
       a.append([-1.0*alat*0.5,alat*0.5,0.0])
+    if ibrav == 0:
+      celldm1 = float(celldm1_s.group(1))
+      alat = celldm1
+      #cellcard = re.search(r"CELL_PARAMETERS.*$(\s*[\d.\-]+\s+){9}",fs,re.MULTILINE)
+      cellcard = re.search(r"CELL_PARAMETERS.*$\s*([\d.\-]+)\s+([\d.\-]+)\s+([\d.\-]+)\s+([\d.\-]+)\s+([\d.\-]+)\s+([\d.\-]+)\s+([\d.\-]+)\s+([\d.\-]+)\s+([\d.\-]+)\s+",fs,re.MULTILINE)
+      cellparams = [float(cellcard.group(i).strip()) for i in range(1,10)]
+      cellparams1 = alat*np.array(cellparams)
+      a.append(cellparams1[0:3])
+      a.append(cellparams1[3:6])
+      a.append(cellparams1[6:9])
+
     self.a = np.array(a)
     self.alat= alat
-    #atoms positions, in atomunits
+    #atoms positions, switch to angstroms
     #if specified in crystal coords, switch to angstrom
     atomcard = re.search(r"ATOMIC_POSITIONS.*K_POINTS",fs,re.DOTALL)
     atomunits_s = re.search(r"ATOMIC_POSITIONS\s+(\w+)",atomcard.group(0))
@@ -47,9 +58,9 @@ class scfindata:
     for m in atoms:
       p = [float(x) for x in m[1:]]
       if atomunits=="crystal":
-        atpos.append([m[0],np.dot(np.array(p),self.a)/0.52917721092])
-      else:
-        atpos.append([m[0],np.array(p)])
+        atpos.append([m[0],np.dot(np.array(p),self.a)*0.52917721092])
+      if atomunits=="alat":
+        atpos.append([m[0],np.array(p)*alat*0.52917721092])
     self.atpos = atpos
   
 
@@ -68,7 +79,7 @@ class scfindata:
     f.write("begin atoms_cart\n")
     f.write("Ang\n")
     for ap in self.atpos:
-      p = ap[1] * self.alat
+      p = ap[1] 
       f.write("%s %19.27g %19.27g %19.27g\n" % (ap[0],p[0],p[1],p[2]))
     f.write("end atoms_cart\n\n")
     f.write("mp_grid : %s %s %s\n\n" % kpts)

@@ -7,6 +7,8 @@ angSI = 1.0e-10; #angstrom
 invangSI = 1.0e10; #inverse angstrom
 meSI = 9.10938291e-31;
 
+bohrina = 0.52917721092 #one bohr radius in units of angstroms
+
 #gaussian cgs units
 cCGS = 2.99792458e10
 elemCGS = 4.80320425e-10 # charge of electron in cgs units
