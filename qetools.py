@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from pylab import cm
 import re
 import mytools
+import bandtools as bt
 import solidstate
 
 class scfindata:
@@ -67,8 +68,7 @@ class scfindata:
   def printwin(self,kpts):
     """print wannier90 input file.
     input: kpts = (n1,n2,n3) monkhorst-pack grid.
-    WARNING: There may be round-off errors because this info is 
-    read from scf output file."""
+    """
     f = open("x.win","w")
     f.write("begin unit_cell_cart\n")
     f.write("Bohr\n")
@@ -473,8 +473,46 @@ class mmn:
 
 
   
+class amn:
+  """reads .amn file which is output from wannier90.
+  These are transformation matrices between bloch states
+  and starting guess in wannier90 input file.
+  Stored in amat. """
 
+  def __init__(self,filename):
 
+    f = open(filename,"r")
+    f.readline()
+    info = f.readline()
+    infos = [int(x) for x in info.split()]
+    self.nbnds = infos[0]
+    self.nkpts = infos[1]
+    self.nwann = infos[2]
+    self.amat = np.zeros((self.nkpts,self.nbnds,self.nwann), dtype=complex)
 
+    for kidx in range(self.nkpts):
+      for nwidx in range(self.nwann):
+        for nbidx in range(self.nbnds):
+          head = f.readline().split()
+          headsi = [int(head[i]) for i in range(3)]
+          val = float(head[3])+ 1.0j*float(head[4])
+          if( headsi[0]-1 != nbidx or headsi[1]-1 != nwidx or headsi[2]-1 != kidx):
+            print "reading .amn error: ", headsi, nbidx, nwidx, kidx
+          self.amat[kidx,nbidx,nwidx] = val
+
+    f.close()
+
+class wanneig:
+  """reads .eig file which is output from wannier90.
+  These are the eigenvalues for different bands and kpoints.
+  Stored in eigs. """
+
+  def __init__(self,filename):
+
+    mat = bt.readmat(filename)
+    nb = int(mat[-1,0])
+    nk = int(mat[-1,1])
+    eigs = mat[:,2]
+    self.eigs = np.reshape(eigs,(nb,nk), order='F')
 
 
