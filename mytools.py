@@ -109,6 +109,6 @@ class linked_list:
   def printll(self):
     self.curr = self.head
     while self.curr is not None:
-      print self.curr.data
+      print(self.curr.data)
       self.step()
     self.curr = self.head

@@ -283,6 +283,62 @@ class spaghetti:
     plt.savefig("bands.png")
     plt.show()
 
+class spaghettiv:
+  """band structures from verbose nscf file"""
+  def __init__(self,filename):
+    """reads verbose nscf file"""
+    f = open(filename,"r")
+    fstr= f.read()
+    matches = re.findall(r"k =([\s\d.\-]+)\([\s\w]+\)\s+bands \(ev\):([\s\d.\-]+)",fstr)
+    efmatch = re.search(r"the Fermi energy is([\s\d.\-]+)ev",fstr)
+    ef1match = re.search(r"highest occupied, lowest unoccupied level \(ev\):\s+([\d.\-]+)\s+([\d.\-]+)",fstr)
+    kpts = []
+    bands = []
+    for m in matches:
+      ks0 = m[0].strip()
+      ks1 = ks0.replace("-"," -")
+      ks2 = ks1.split()
+      kpts.append(list(map(float,ks2)))
+      b0 = m[1].strip()
+      b1 = b0.replace("-"," -")
+      b2 = b1.split()
+      bands.append(list(map(float,b2)))
+    self.kpts = np.array(kpts)
+    self.bands = np.transpose(np.array(bands))
+    if efmatch:
+      self.ef = float(efmatch.group(1).strip())
+    elif ef1match:
+      self.ef = (float(ef1match.group(1)) + float(ef1match.group(2)) )/2.0
+
+  def plot(self,emin,emax,sympts,symlabels):
+    """creates a plot of the bandstructure. 
+    sympts are the indices [n] of high-symmetry points,
+    symlabels are their ["labels"] ."""
+    plt.figure()
+    plt.subplot(1,1,1)
+    x = range(1,len(self.kpts)+1)
+    for b in self.bands:
+      plt.plot(x,b,color='blue',linestyle='-',linewidth=2.0)
+    y = np.linspace(self.ef,self.ef,len(self.kpts),endpoint=True)
+    plt.plot(x,y,color='black',linestyle='--')
+    plt.ylim(emin,emax)
+    plt.xticks([])
+    plt.ylabel("E (eV)",size="x-large")
+    for s in sympts:
+      plt.vlines(s,emin,emax,color='black')
+    ax = plt.gca()
+    ax.set_xticks(sympts)
+    ax.set_xticklabels(symlabels)
+    for lab in ax.get_yticklabels():
+      lab.set_fontsize(18)
+    for lab in ax.get_xticklabels():
+      lab.set_fontsize(18)
+    plt.gcf().subplots_adjust(left=0.2)
+    plt.savefig("bands.png")
+    plt.show()
+
+
+
 class spaghetti_scf:
   """band structures"""
   def __init__(self,filename):
@@ -497,7 +553,7 @@ class amn:
           headsi = [int(head[i]) for i in range(3)]
           val = float(head[3])+ 1.0j*float(head[4])
           if( headsi[0]-1 != nbidx or headsi[1]-1 != nwidx or headsi[2]-1 != kidx):
-            print "reading .amn error: ", headsi, nbidx, nwidx, kidx
+            print("reading .amn error: ", headsi, nbidx, nwidx, kidx)
           self.amat[kidx,nbidx,nwidx] = val
 
     f.close()
