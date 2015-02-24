@@ -283,13 +283,15 @@ class spaghetti:
     plt.savefig("bands.png")
     plt.show()
 
+#bands[iband,ik]
 class spaghettiv:
   """band structures from verbose nscf file"""
   def __init__(self,filename):
     """reads verbose nscf file"""
     f = open(filename,"r")
     fstr= f.read()
-    matches = re.findall(r"k =([\s\d.\-]+)\([\s\w]+\)\s+bands \(ev\):([\s\d.\-]+)",fstr)
+    #matches = re.findall(r"k =([\s\d.\-]+)\([\s\w]+\)\s+bands \(ev\):([\s\d.\-]+)",fstr)
+    matches = re.findall(r"k =([\s\d.\-]+)band energies \(ev\):([\s\d.\-]+)",fstr)
     efmatch = re.search(r"the Fermi energy is([\s\d.\-]+)ev",fstr)
     ef1match = re.search(r"highest occupied, lowest unoccupied level \(ev\):\s+([\d.\-]+)\s+([\d.\-]+)",fstr)
     kpts = []
@@ -472,16 +474,28 @@ class matdyn:
     f.close()
 
 
-def relaxed(filename):
-  """takes a relax outputfile and returns the final structure
+class relaxed:
+  """takes an espresso relax outputfile and finds the final structure
   as a list of Atom objects"""
-  f = open(filename,"r")
-  m = re.search(r"Begin final coordinates\s+ATOMIC_POSITIONS[^\n]*\n(.*)End final coordinates",f.read(),re.DOTALL)
-  f.close()
-  ss = m.group(1).strip().split('\n')
-  sss = [s.split() for s in ss]
-  ans = [solidstate.Atom(x[0],np.array([float(x[1]),float(x[2]),float(x[3])])) for x in sss]
-  return ans
+  def __init__(self,filename):
+    """init from scf output file"""
+    f = open(filename,"r")
+    fs = f.read()
+    f.close()
+
+    #final structure
+    m = re.search(r"Begin final coordinates\s+ATOMIC_POSITIONS[^\n]*\n(.*)End final coordinates",fs,re.DOTALL)
+    ss = m.group(1).strip().split('\n')
+    sss = [s.split() for s in ss]
+    coords = [solidstate.Atom(x[0],np.array([float(x[1]),float(x[2]),float(x[3])])) for x in sss]
+    self.coords = coords
+    self.coords_str = m.group(1).strip()
+
+    #final energy
+    m = re.search(r"Final energy\s+=\s+([-\d.]+)\s*Ry",fs,re.DOTALL)
+    en = float(m.group(1))
+    #print(en)
+    self.en = en
 
 
 class mmn:

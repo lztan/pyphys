@@ -6,8 +6,10 @@ eps0SI = 8.85418782e-12;
 angSI = 1.0e-10; #angstrom
 invangSI = 1.0e10; #inverse angstrom
 meSI = 9.10938291e-31;
+kbSI = 1.3806488 #boltzmann constant
 
 bohrina = 0.52917721092 #one bohr radius in units of angstroms
+rydinev = 13.60569253 #one rydberg in eV
 
 #gaussian cgs units
 cCGS = 2.99792458e10
