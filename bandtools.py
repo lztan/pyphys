@@ -4,6 +4,7 @@ import numpy as np
 
 #returns 3d np array with indices in the order:
 #kpoint idx, band idx, idx of (kx,ky,e) 
+#Works for arbitrary dimenion of k
 # The canonical file structure is:
 # kx1 ky1 e <--band1
 # kx1 ky1 e <--band2
@@ -17,9 +18,10 @@ def readbands(filename):
   while True:
     l = fin.readline()
     xs = l.split()
-    if(nbands==0 or (prev[0]==xs[0] and prev[1]==xs[1])):
+    ndim = len(xs)-1
+    if(nbands==0 or prev==xs[0:ndim]):
       nbands = nbands + 1
-      prev = xs[0:2]
+      prev = xs[0:ndim]
     else:
       break
   fin.close()

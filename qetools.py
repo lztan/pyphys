@@ -235,7 +235,8 @@ class spaghetti:
     """reads nscf file"""
     f = open(filename,"r")
     fstr= f.read()
-    matches = re.findall(r"k =([\s\d.\-]+)band energies \(ev\):([\s\d.\-]+)",fstr)
+    matches = re.findall(r"k =([\s\d.\-]+)\([\s\w]+\)\s+bands \(ev\):([\s\d.\-]+)",fstr)
+    #matches = re.findall(r"k =([\s\d.\-]+)band energies \(ev\):([\s\d.\-]+)",fstr)
     efmatch = re.search(r"the Fermi energy is([\s\d.\-]+)ev",fstr)
     ef1match = re.search(r"highest occupied, lowest unoccupied level \(ev\):\s+([\d.\-]+)\s+([\d.\-]+)",fstr)
     kpts = []
@@ -248,7 +249,7 @@ class spaghetti:
       b0 = m[1].strip()
       b1 = b0.replace("-"," -")
       b2 = b1.split()
-      bands.append(map(float,b2))
+      bands.append(list(map(float,b2)))
     self.kpts = np.array(kpts)
     self.bands = np.transpose(np.array(bands))
     if efmatch:
@@ -265,8 +266,11 @@ class spaghetti:
     x = range(1,len(self.kpts)+1)
     for b in self.bands:
       plt.plot(x,b,color='blue',linestyle='-',linewidth=2.0)
-    y = np.linspace(self.ef,self.ef,len(self.kpts),endpoint=True)
-    plt.plot(x,y,color='black',linestyle='--')
+    try:
+      y = np.linspace(self.ef,self.ef,len(self.kpts),endpoint=True)
+      plt.plot(x,y,color='black',linestyle='--')
+    except AttributeError:
+      z=1+1
     plt.ylim(emin,emax)
     plt.xticks([])
     plt.ylabel("E (eV)",size="x-large")
@@ -320,7 +324,8 @@ class spaghettiv:
     plt.subplot(1,1,1)
     x = range(1,len(self.kpts)+1)
     for b in self.bands:
-      plt.plot(x,b,color='blue',linestyle='-',linewidth=2.0)
+      #plt.plot(x,b,color='blue',linestyle='-',linewidth=2.0)
+      plt.plot(x,b,'.',color='blue',linewidth=2.0)
     y = np.linspace(self.ef,self.ef,len(self.kpts),endpoint=True)
     plt.plot(x,y,color='black',linestyle='--')
     plt.ylim(emin,emax)
@@ -451,6 +456,7 @@ class matdyn:
     f = open(filename,"r")
     fstr = f.read()
     #this gets the eigen vectors
+    # evecs[nu,i,j] = jth component of displacement of ith atom of mode nu
     matches = re.findall(r"omega.*\s+((?:\([\s\.\d\-]+\)\s+)+)",fstr)
     #print len(matches)
     evecs = []
@@ -460,9 +466,7 @@ class matdyn:
       temp = []
       for m in m0sl:
         m1 = [float(x) for x in m.split()]
-        temp.append(m1[0])
-        temp.append(m1[2])
-        temp.append(m1[4])
+        temp.append([m1[0],m1[2],m1[4]])
       evecs.append(temp)
     self.evecs = np.array(evecs)
       
