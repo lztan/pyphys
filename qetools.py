@@ -235,7 +235,7 @@ class spaghetti:
     """reads nscf file"""
     f = open(filename,"r")
     fstr= f.read()
-    matches = re.findall(r"k =([\s\d.\-]+)\([\s\w]+\)\s+bands \(ev\):([\s\d.\-]+)",fstr)
+    matches = re.findall(r"k =([\s\d.\-]+)\([\s\w]+\)\s+band[\s\w]+\(ev\):([\s\d.\-]+)",fstr)
     #matches = re.findall(r"k =([\s\d.\-]+)band energies \(ev\):([\s\d.\-]+)",fstr)
     efmatch = re.search(r"the Fermi energy is([\s\d.\-]+)ev",fstr)
     ef1match = re.search(r"highest occupied, lowest unoccupied level \(ev\):\s+([\d.\-]+)\s+([\d.\-]+)",fstr)
@@ -294,8 +294,7 @@ class spaghettiv:
     """reads verbose nscf file"""
     f = open(filename,"r")
     fstr= f.read()
-    #matches = re.findall(r"k =([\s\d.\-]+)\([\s\w]+\)\s+bands \(ev\):([\s\d.\-]+)",fstr)
-    matches = re.findall(r"k =([\s\d.\-]+)band energies \(ev\):([\s\d.\-]+)",fstr)
+    matches = re.findall(r"k =([\s\d.\-]+)\([\s\w]+\)\s+band[\s\w]+\(ev\):([\s\d.\-]+)",fstr)
     efmatch = re.search(r"the Fermi energy is([\s\d.\-]+)ev",fstr)
     ef1match = re.search(r"highest occupied, lowest unoccupied level \(ev\):\s+([\d.\-]+)\s+([\d.\-]+)",fstr)
     kpts = []
