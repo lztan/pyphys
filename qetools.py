@@ -8,6 +8,129 @@ import mytools
 import bandtools as bt
 import solidstate
 
+class pwin:
+  """setup input file"""
+  def __init__(self):
+    self.cell = np.zeros((3,3))
+    self.atoms = []
+    self.species = []
+    self.kpts = []
+    self.fields = dict([])
+
+    self.prisecdict = dict([])
+    self.prisecdict["control"] = 1
+    self.prisecdict["system"] = 2
+    self.prisecdict["electrons"] = 3
+
+    self.prikdict = dict([])
+    self.prikdict["calculation"] = 1
+    self.prikdict["restart_mode"] = 2
+    self.prikdict["ibrav"] = 3
+    self.prikdict["celldm(1)"] = 4
+
+  def setcell(self,cell1):
+    #angstroms, cartesian coords
+    self.cell = cell1
+
+  def setcellabc(self,a,b,c,aa,bb,cc):
+    #angstroms
+    #sepcify unit cell from interaxial angles
+    ax = a
+    bx = b*np.cos(cc)
+    by = b*np.sin(cc)
+    cx = c*np.cos(bb)
+    cy = c*(np.cos(aa)-np.cos(bb)*np.cos(cc))/np.sin(cc)
+    cz = np.sqrt(c*c-cx*cx-cy*cy)
+    self.cell = np.array([[a,0.0,0.0],[bx,by,0.0],[cx,cy,cz]])
+
+  def setatom(self,a,x,y,z):
+    #e.g. at = ["C", 0.0 , 0.0, 0.0]
+    # crystal coords
+    self.atoms.append([a,x,y,z])
+
+  def setf(self, sec, k, v):
+    if sec not in self.fields:
+      self.fields[sec] = dict([])
+    self.fields[sec][k] = v
+
+  def setdefaults(self):
+    self.setf('control','restart_mode',"'from_scratch'")
+    self.setf('control','prefix',"'x'")
+    self.setf('control','pseudo_dir',"'/p/home/lztan/psp/'")
+    self.setf('control','outdir',"'./work'")
+    self.setf('control','verbosity',"'high'")
+    
+    self.setf('system','ibrav','0')
+    self.setf('system','celldm(1)','1.889726')
+    self.setf('system','ecutwfc','60.0D0')
+
+    self.setf('electrons','diagonalization',"'david'")
+
+  def setk(self,kpts1):
+    #crystal coords
+    # [k1, k2, k3]
+    # [k1, k2, k3]
+    # . . . 
+    self.kpts = kpts1
+
+  def setkauto(self,n1,n2,n3):
+    kpts1 = []
+    for i1 in range(n1):
+      for i2 in range(n2):
+        for i3 in range(n3):
+          kpts1.append([1.0*i1/n1,1.0*i2/n2,1.0*i3/n3])
+    self.kpts = kpts1
+
+  def setpsp(self,a,m,psp):
+    self.species.append([a,m,psp])
+
+  def makin(self,filename):
+    f = open(filename,"w")
+
+    ntyp = len(self.species)
+    nat = len(self.atoms)
+
+    self.setf('system','nat',str(nat))
+    self.setf('system','ntyp',str(ntyp))
+
+    secs = self.fields.keys()
+    secs1 = sorted(secs,key=lambda x:(self.prisecdict[x] if x in self.prisecdict else 999))
+
+    for sec in secs1:
+      ks = self.fields[sec].keys()
+      ks1 = sorted(ks,key=lambda x:(self.prikdict[x] if x in self.prikdict else 999))
+      f.write('&' + sec + '\n')
+      for k in ks1:
+        f.write('  ' + k + ' = ' + self.fields[sec][k] + '\n')
+      f.write('/\n')
+      f.write('\n')
+
+    f.write('\n')
+    f.write("ATOMIC_SPECIES\n")
+    for psp in self.species:
+      f.write(psp[0] + "  " + str(psp[1]) + "  " + psp[2] + "\n")
+
+    f.write('\n')
+    f.write("CELL_PARAMETERS\n")
+    for v in self.cell:
+      f.write("  " + str(v[0]) + "  " + str(v[1]) + "  " + str(v[2]) + "\n")
+
+    f.write('\n')
+    f.write("ATOMIC_POSITIONS (crystal)\n")
+    for a in self.atoms:
+      f.write(a[0] + "  " + str(a[1]) + "  "  + str(a[2]) + "  " + str(a[3]) + "\n" )
+
+
+    nk = len(self.kpts)
+    f.write('\n')
+    f.write("K_POINTS (crystal)\n")
+    f.write(str(nk)+"\n")
+    for k in self.kpts:
+      f.write("  " + str(k[0]) + "  " + str(k[1]) + "  " + str(k[2]) + "  1.0\n")
+
+    f.close()
+
+
 class scfindata:
   """information for scf calclations. 
   from scf input file"""
