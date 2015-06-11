@@ -116,7 +116,7 @@ class pwin:
       f.write("  " + str(v[0]) + "  " + str(v[1]) + "  " + str(v[2]) + "\n")
 
     f.write('\n')
-    f.write("ATOMIC_POSITIONS (crystal)\n")
+    f.write("ATOMIC_POSITIONS alat\n")
     for a in self.atoms:
       f.write(a[0] + "  " + str(a[1]) + "  "  + str(a[2]) + "  " + str(a[3]) + "\n" )
 
