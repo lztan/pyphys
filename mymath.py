@@ -1,5 +1,10 @@
 import numpy as np
 
+#modulus for reals
+#returns something in the range [lb,ub)
+def modrange(lb,ub,x):
+  return np.mod(x-lb,ub-lb) + lb
+
 #tensor product of matrices
 def tensprd(m1,m2):
   p1,q1 = m1.shape
