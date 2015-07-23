@@ -4,9 +4,9 @@ import numpy as np
 def partn(l,n):
   nl = len(l)
   if nl%n == 0:
-    nparts =  nl/n
+    nparts =  nl//n
   else:
-    nparts = nl/n + 1
+    nparts = nl//n + 1
   return [l[i*n:(i+1)*n] for i in range(nparts)]
 
 #flatten a list of lists
