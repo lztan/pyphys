@@ -579,7 +579,8 @@ class matdyn:
     fstr = f.read()
     #this gets the eigen vectors
     # evecs[nu,i,j] = jth component of displacement of ith atom of mode nu
-    matches = re.findall(r"omega.*\s+((?:\([\s\.\d\-]+\)\s+)+)",fstr)
+    #matches = re.findall(r"omega.*\s+((?:\([\s\.\d\-]+\)\s+)+)",fstr)
+    matches = re.findall(r"freq.*\s+((?:\([\s\.\d\-]+\)\s+)+)",fstr)
     #print len(matches)
     evecs = []
     for m0 in matches:
