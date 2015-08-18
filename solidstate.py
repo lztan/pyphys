@@ -30,7 +30,7 @@ def trans(t,aa):
 def rot(udir,theta,aa):
   ans = []
   for a in aa:
-    p1 = np.dot(rotmat(udir,theta) * a.pos)
+    p1 = np.dot(rotmat(udir,theta) , a.pos)
     ans.append(Atom(a.name,p1))
   return ans
 
