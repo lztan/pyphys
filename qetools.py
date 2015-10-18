@@ -605,7 +605,6 @@ class relaxed:
   """takes an espresso relax outputfile and finds the final structure
   as a list of Atom objects"""
   def __init__(self,filename):
-    """init from scf output file"""
     f = open(filename,"r")
     fs = f.read()
     f.close()
@@ -623,6 +622,29 @@ class relaxed:
     en = float(m.group(1))
     #print(en)
     self.en = en
+
+class vcrelaxed:
+  """takes an espresso vcrelax outputfile and finds the final structure
+  as a list of Atom objects"""
+  def __init__(self,filename):
+    f = open(filename,"r")
+    fs = f.read()
+    f.close()
+
+    #final structure
+    m = re.search(r"Begin final coordinates.*ATOMIC_POSITIONS[^\n]*\n(.*)End final coordinates",fs,re.DOTALL)
+    ss = m.group(1).strip().split('\n')
+    sss = [s.split() for s in ss]
+    coords = [solidstate.Atom(x[0],np.array([float(x[1]),float(x[2]),float(x[3])])) for x in sss]
+    self.coords = coords
+    self.coords_str = m.group(1).strip()
+
+    #final energy
+    m = re.search(r"Final enthalpy\s+=\s+([-\d.]+)\s*Ry",fs,re.DOTALL)
+    en = float(m.group(1))
+    #print(en)
+    self.en = en
+
 
 
 class mmn:
