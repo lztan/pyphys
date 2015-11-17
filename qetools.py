@@ -712,4 +712,33 @@ class wanneig:
     eigs = mat[:,2]
     self.eigs = np.reshape(eigs,(nb,nk), order='F')
 
+#psp[i][:,0] = radial grid
+#psp[i][:,1] = core potential
+#psp[i][:,2] = wavefunction
+class fhipp:
+  """reads fhi pseudopotentials"""
+  def __init__(self,filename):
+    f = open(filename,"r")
+    for i in range(7):
+      f.readline()
+    line8 = f.readline().split()
+    norb = int(line8[1])
+    for i in range(10):
+      f.readline()
 
+    accu = []
+      
+    for i in range(norb):
+      l = f.readline().split()
+      npts = int(l[0])
+      accu1 = np.zeros((npts,3))
+      for j in range(npts):
+
+        xs = [float(x) for x in f.readline().split()]
+        accu1[j,0] = xs[1]
+        accu1[j,1] = xs[2]
+        accu1[j,2] = xs[3]
+      accu.append(accu1)
+
+    self.psp = accu
+          
