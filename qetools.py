@@ -735,8 +735,8 @@ class wanneig:
     self.eigs = np.reshape(eigs,(nb,nk), order='F')
 
 #psp[i][:,0] = radial grid
-#psp[i][:,1] = core potential
-#psp[i][:,2] = wavefunction
+#psp[i][:,1] = wavefunction 
+#psp[i][:,2] = core potential
 class fhipp:
   """reads fhi pseudopotentials"""
   def __init__(self,filename):
